@@ -1,0 +1,6 @@
+{
+  "name": "my-gif-search",
+  "short_name": "my-gif-search",
+  "start_url": "/",
+  "display": "standalone"
+}

@@ -1,0 +1,78 @@
+<link rel="import" href="../../bower_components/polymer/polymer.html">
+<link rel="import" href="../../bower_components/iron-ajax/iron-ajax.html">
+<link rel="import" href="../../bower_components/paper-input/all-imports.html">
+<link rel="import" href="../../bower_components/paper-button/paper-button.html">
+
+
+<dom-module id="my-gif-search-app">
+    <template>
+        <style>
+            :host {
+                display: block;
+            }
+        </style>
+        <h2>Hello [[keyword]]!</h2>
+
+        <!-- INPUT -->
+        <paper-input label="Search" type="text" value="{{keyword}}"></paper-input>
+        <paper-button on-tap="buttonTapped">MOAR</paper-button>
+        <hr>
+
+        <!-- CATS BE HERE -->
+        <template is="dom-repeat" items="[[result]]">
+        <img src="[[item]]">
+        </template>
+
+        <!-- FETCH CATS -->
+        <iron-ajax id="catsFetcher"
+                auto
+                url="https://api.giphy.com/v1/gifs/search?q=[[keyword]]&api_key=dc6zaTOxFJmzC&limit=[[limit]]"
+                handle-as="json"
+                on-response="handleResponse"
+                debounce-duration="300"></iron-ajax>
+
+
+
+    </template>
+
+    <script>
+
+        class MyApplication extends Polymer.Element {
+            static get is() {
+                return 'my-gif-search-app';
+            }
+
+            static get properties() {
+                return {
+                    result: {
+                        type: Array,
+                        value (){
+                            return [];
+                        }
+                    },
+                    keyword: {
+                        type: String,
+                        value: "cats"
+                    },
+                    limit: {
+                        type: Number,
+                        value: 1
+                    }
+                };
+            }
+
+            handleResponse (data) {
+                console.log(data.detail.response.data);
+                console.log(`${data.detail.response.data.length} ${this.keyword} be fetched.`);
+                this.result = data.detail.response.data.map(dataItem => {return dataItem.images.fixed_height.url});
+            }
+
+            buttonTapped (event) {
+                this.$.catsFetcher.generateRequest();
+                this.limit = this.limit + 1;
+            }
+        }
+
+        window.customElements.define(MyApplication.is, MyApplication);
+    </script>
+</dom-module>

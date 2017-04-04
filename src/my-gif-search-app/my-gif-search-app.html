@@ -1,38 +1,92 @@
 <link rel="import" href="../../bower_components/polymer/polymer.html">
 <link rel="import" href="../../bower_components/iron-ajax/iron-ajax.html">
 <link rel="import" href="../../bower_components/paper-input/all-imports.html">
+<link rel="import" href="../../bower_components/paper-toggle-button/paper-toggle-button.html">
 <link rel="import" href="../../bower_components/paper-button/paper-button.html">
+<link rel="import" href="../api-key.html">
 
+<link rel="import" href="path/to/technology.css" type="css">
 
 <dom-module id="my-gif-search-app">
     <template>
         <style>
             :host {
                 display: block;
+                margin: 10px;
+            }
+
+            paper-input, paper-button, paper-toggle-button {
+                display: inline-block;
+            }
+
+            paper-button {
+                text-align: center;
+            }
+
+            .large {
+                width: 70%;
+            }
+
+            .small {
+                width: 14%;
+            }
+
+            img {
+                max-width: 200px;
+                max-height: 200px;
+                border-radius: 5px;
+            }
+
+            div {
+                vertical-align: top;
+                width: 200px;
+                display: inline-block;
+                margin: 8px;
+                padding: 4px;
+                text-align: center;
+            }
+
+            p {
+                min-height: 50px;
+                margin-top: 4px;
+                text-align: center;
+                background-color: #eeeeee;
+                border-radius: 5px;
+                padding:4px;
             }
         </style>
         <h2>Hello [[keyword]]!</h2>
 
         <!-- INPUT -->
-        <paper-input label="Search" type="text" value="{{keyword}}"></paper-input>
-        <paper-button on-tap="buttonTapped">MOAR</paper-button>
-        <hr>
+        <paper-input class="large" label="Search" type="text" value="{{keyword}}"></paper-input>
+        <paper-input class="small" label="Limit" type="text" value="{{limit}}"></paper-input>
+        <paper-button class="pirmary" on-tap="buttonTapped">+</paper-button>
+        <paper-toggle-button checked value="{{isCatsInsteadOfRijks}}" on-tap="toggleTapped"></paper-toggle-button>
 
         <!-- CATS BE HERE -->
         <template is="dom-repeat" items="[[result]]">
-        <img src="[[item]]">
+            <div>
+                <img src="[[item.url]]">
+                <p><b>[[item.title]]</b><br/><small>[[item.maker]]</small></p>
+            </div>
         </template>
 
+        <hr>
+
+        Loaded [[limit]] images.
+
         <!-- FETCH CATS -->
-        <iron-ajax id="catsFetcher"
-                auto
-                url="https://api.giphy.com/v1/gifs/search?q=[[keyword]]&api_key=dc6zaTOxFJmzC&limit=[[limit]]"
-                handle-as="json"
-                on-response="handleResponse"
-                debounce-duration="300"></iron-ajax>
+        <iron-ajax id="catsFetcher" auto="[[isCatsInsteadOfRijks]]"
+                   url="https://api.giphy.com/v1/gifs/search?q=[[keyword]]&api_key=dc6zaTOxFJmzC&limit=[[limit]]"
+                   handle-as="json"
+                   on-response="handleCatsResponse"
+                   debounce-duration="1"></iron-ajax>
 
-
-
+        <iron-ajax id="rijksFetcher"  auto="[[!isCatsInsteadOfRijks]]"
+                   url="https://www.rijksmuseum.nl/api/nl/collection?key=[[rijksmuseumKey]]&format=json&ps=[[limit]]&maker=[[keyword]]"
+                   handle-as="json"
+                   on-response="handleRijksResponse"
+                   debounce-duration="1"></iron-ajax>
     </template>
 
     <script>
@@ -44,32 +98,112 @@
 
             static get properties() {
                 return {
+                    /**
+                     *
+                     */
                     result: {
                         type: Array,
                         value (){
                             return [];
                         }
                     },
+                    /**
+                     *
+                     */
                     keyword: {
                         type: String,
-                        value: "cats"
+                        value: 'cats'
                     },
+                    /**
+                     *
+                     */
+                    rijksmuseumKey: {
+                        type: String
+                    },
+                    /**
+                     *
+                     */
                     limit: {
                         type: Number,
                         value: 1
+                    },
+                    /**
+                     *
+                     */
+                    isCatsInsteadOfRijks: {
+                        object: Boolean,
+                        value: true
                     }
                 };
             }
 
-            handleResponse (data) {
-                console.log(data.detail.response.data);
-                console.log(`${data.detail.response.data.length} ${this.keyword} be fetched.`);
-                this.result = data.detail.response.data.map(dataItem => {return dataItem.images.fixed_height.url});
+            /**
+             *
+             */
+            connectedCallback () {
+                super.connectedCallback();
+
+                // GET THE KEYS
+                let rijksmuseumKey = new ApiKey().rijksmuseum;
+                this.rijksmuseumKey = rijksmuseumKey;
             }
 
-            buttonTapped (event) {
-                this.$.catsFetcher.generateRequest();
-                this.limit = this.limit + 1;
+            /**
+             *
+             * @param responseData
+             */
+            handleCatsResponse(responseData) {
+                console.log(responseData);
+                let data = responseData.detail.response.data;
+                // How many did we get??
+                let limit = data.length;
+
+                console.log(`I haz ${this.keyword}, ${limit} be fetched.`);
+
+                // take the url of a fixed height image
+                this.result = data.map(dataItem => {
+                    return {
+                        url: dataItem.images.fixed_height.url,
+                        title: dataItem.slug,
+                        maker: dataItem.source_tld,
+                    }
+                });
+            }
+
+            /**
+             *
+             * @param responseData
+             */
+            handleRijksResponse(responseData) {
+                let data = responseData.detail.response.artObjects;
+                // How many did we get??
+                let limit = data.length;
+
+                console.log(`I found ${limit} pictures in the collection`);
+                this.result = data.map(dataItem => {
+                    return {
+                        url: dataItem.webImage.url,
+                        title: dataItem.title,
+                        maker: dataItem.principalOrFirstMaker
+                    }
+                });
+
+            }
+
+            /**
+             *
+             * @param event
+             */
+            buttonTapped(event) {
+                let currentLimit = Number.parseInt(this.limit);
+                this.set('limit', currentLimit + 1);
+            }
+
+            /**
+             *
+             */
+            toggleTapped() {
+                this.isCatsInsteadOfRijks = !this.isCatsInsteadOfRijks;
             }
         }
 

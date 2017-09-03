@@ -3,6 +3,7 @@
 <link rel="import" href="../../bower_components/paper-input/all-imports.html">
 <link rel="import" href="../../bower_components/paper-toggle-button/paper-toggle-button.html">
 <link rel="import" href="../../bower_components/paper-button/paper-button.html">
+<link rel="import" href="../../bower_components/paper-dialog/paper-dialog.html">
 <link rel="import" href="../api-key.html">
 
 <link rel="import" href="../../theme/technology.css" type="css">
@@ -31,67 +32,93 @@
                 width: 14%;
             }
 
-            img {
-                max-width: 200px;
-                max-height: 200px;
+            img { 
                 border-radius: 5px;
             }
 
-            div {
+            .item img {
+                max-width: 200px;
+                max-height: 200px;
+            }
+
+            .item {
                 vertical-align: top;
                 width: 200px;
                 display: inline-block;
                 margin: 8px;
                 padding: 4px;
                 text-align: center;
+                cursor:pointer;
             }
 
-            p {
+            .item p {
                 min-height: 50px;
                 margin-top: 4px;
+                margin-bottom:0px;
                 text-align: center;
                 background-color: #eeeeee;
                 border-radius: 5px;
                 padding:4px;
             }
+
+            #dialog {
+                background-color: #eeeeee;
+                border-radius: 5px;
+            }
+
+            #dialog p {
+                text-align: center;
+            }
         </style>
-        <h2>Hello [[keyword]]!</h2>
+        <h2 on-tap="headerTapped">Hello [[keyword]]!</h2>
+
+        <paper-dialog id="dialog" opened="{{dialogOpened}}">
+            <div>
+            <h2>[[selectedItem.title]]</h2>
+            <img src$="[[selectedItem.originalUrl]]" alt="[[selectedItem.title]]">
+            <p>[[selectedItem.maker]]</p>
+        </div>
+        </paper-dialog>
 
         <!-- INPUT -->
         <paper-input class="large" label="Search" type="text" value="{{keyword}}"></paper-input>
-        <paper-input class="small" label="Limit" type="text" value="{{limit}}"></paper-input>
+        <paper-input class="small" label="Limit" type="text" value="{{_limit}}"></paper-input>
         <paper-button class="pirmary" on-tap="buttonTapped">+</paper-button>
-        <paper-toggle-button checked value="{{isCatsInsteadOfRijks}}" on-tap="toggleTapped"></paper-toggle-button>
+        <paper-toggle-button checked value="[[_isGiphyInsteadOfRijks]]" on-tap="toggleTapped"></paper-toggle-button>
 
-        <!-- CATS BE HERE -->
-        <template is="dom-repeat" items="[[result]]">
-            <div>
-                <img src="[[item.url]]">
-                <p><b>[[item.title]]</b><br/><small>[[item.maker]]</small></p>
+        <!-- ITEMS BE HERE -->
+        <template is="dom-repeat" items="[[_result]]">
+            <div on-tap="handleItemTap" class="item">
+                <img src$="[[item.url]]" alt="[[item.title]]">
+                <p>
+                    <b>[[item.title]]</b><br/>
+                    <small>[[item.maker]]</small>
+                </p>
             </div>
         </template>
 
         <hr>
 
-        Loaded [[limit]] images.
+        Loaded [[_limit]] images.
 
-        <!-- FETCH CATS -->
-        <iron-ajax id="catsFetcher" auto="[[isCatsInsteadOfRijks]]"
-                   url="https://api.giphy.com/v1/gifs/search?q=[[keyword]]&api_key=dc6zaTOxFJmzC&limit=[[limit]]"
+        <!-- FETCH ITEMS -->
+        <iron-ajax auto="[[_isGiphyInsteadOfRijks]]"
+                   url="https://api.giphy.com/v1/gifs/search?q=[[keyword]]&api_key=dc6zaTOxFJmzC&limit=[[_limit]]"
                    handle-as="json"
-                   on-response="handleCatsResponse"
-                   debounce-duration="1"></iron-ajax>
+                   on-response="handleGiphyResponse"
+                   debounce-duration="400"></iron-ajax>
 
-        <iron-ajax id="rijksFetcher"  auto="[[!isCatsInsteadOfRijks]]"
-                   url="https://www.rijksmuseum.nl/api/nl/collection?key=[[rijksmuseumKey]]&format=json&ps=[[limit]]&maker=[[keyword]]"
+        <iron-ajax auto="[[!_isGiphyInsteadOfRijks]]"
+                   url="https://www.rijksmuseum.nl/api/nl/collection?key=[[rijksmuseumKey]]&format=json&ps=[[_limit]]&maker=[[keyword]]"
                    handle-as="json"
                    on-response="handleRijksResponse"
-                   debounce-duration="1"></iron-ajax>
+                   debounce-duration="400"></iron-ajax>
     </template>
 
     <script>
 
         class MyApplication extends Polymer.Element {
+
             static get is() {
                 return 'my-gif-search-app';
             }
@@ -99,9 +126,9 @@
             static get properties() {
                 return {
                     /**
-                     *
+                     * The results array holds all the items
                      */
-                    result: {
+                    _result: {
                         type: Array,
                         value (){
                             return [];
@@ -123,16 +150,21 @@
                     /**
                      *
                      */
-                    limit: {
+                    _limit: {
                         type: Number,
                         value: 1
                     },
                     /**
                      *
                      */
-                    isCatsInsteadOfRijks: {
+                    _isGiphyInsteadOfRijks: {
                         object: Boolean,
                         value: true
+                    },
+                    selectedItem: Object,
+                    dialogOpened: {
+                        type: Boolean,
+                        value: false
                     }
                 };
             }
@@ -142,69 +174,67 @@
              */
             connectedCallback () {
                 super.connectedCallback();
-
-                // GET THE KEYS
-                let rijksmuseumKey = new ApiKey().rijksmuseum;
-                this.rijksmuseumKey = rijksmuseumKey;
+                // GET THE KEY FOR RIJKS
+                this.rijksmuseumKey = new ApiKey().rijksmuseum;
             }
 
             /**
-             *
+             * Function that takes response from the Giphy API, and forms it to our own item format.
              * @param responseData
              */
-            handleCatsResponse(responseData) {
-                console.log(responseData);
+            handleGiphyResponse(responseData) {
                 let data = responseData.detail.response.data;
-                // How many did we get??
-                let limit = data.length;
-
-                console.log(`I haz ${this.keyword}, ${limit} be fetched.`);
-
+                console.log(`I haz ${this.keyword}, ${data.length} be fetched.`);
                 // take the url of a fixed height image
-                this.result = data.map(dataItem => {
+                this._result = data.map(dataItem => {
                     return {
                         url: dataItem.images.fixed_height.url,
                         title: dataItem.slug,
                         maker: dataItem.source_tld,
+                        originalUrl: dataItem.images.original.url
+                        
                     }
                 });
             }
-
             /**
-             *
+             * Function that takes response from the Rijks API, and forms it to our own item format.
              * @param responseData
              */
             handleRijksResponse(responseData) {
                 let data = responseData.detail.response.artObjects;
-                // How many did we get??
-                let limit = data.length;
-
-                console.log(`I found ${limit} pictures in the collection`);
-                this.result = data.map(dataItem => {
+                console.log(`I found ${data.length} pictures in the collection`);
+                this._result = data.map(dataItem => {
                     return {
                         url: dataItem.webImage.url,
                         title: dataItem.title,
-                        maker: dataItem.principalOrFirstMaker
+                        maker: dataItem.principalOrFirstMaker,
+                        originalUrl: dataItem.webImage.url
                     }
                 });
-
             }
-
             /**
-             *
+             * When we click on the plus one button, we want the limit to be increased.
              * @param event
              */
-            buttonTapped(event) {
-                let currentLimit = Number.parseInt(this.limit);
-                this.set('limit', currentLimit + 1);
+            buttonTapped(event) { 
+                this.set('_limit', Number.parseInt(this._limit) + 1); 
             }
-
             /**
-             *
+             * When we tap the toggle, we switch between Giphy and Rijks.
              */
-            toggleTapped() {
-                this.isCatsInsteadOfRijks = !this.isCatsInsteadOfRijks;
+            toggleTapped() { 
+                this._isGiphyInsteadOfRijks = !this._isGiphyInsteadOfRijks; 
             }
+            /**
+             * Given some item, we can tap it to ...?
+             */
+            handleItemTap(e,f) { 
+                this.set('selectedItem', e.model.item); 
+                
+                let dialog = this.$.dialog;
+                dialog.opened=true;
+            }
+            
         }
 
         window.customElements.define(MyApplication.is, MyApplication);

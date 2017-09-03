@@ -2,31 +2,21 @@
   "name": "my-gif-search",
   "main": "index.html",
   "dependencies": {
-    "polymer": "Polymer/polymer#^2.0.0-rc.2",
-    "paper-input": "PolymerElements/paper-input#2.0-preview",
-    "iron-image": "PolymerElements/iron-image#2.0-preview",
-    "paper-button": "PolymerElements/paper-button#2.0-preview",
-    "paper-toggle-button": "PolymerElements/paper-toggle-button#2.0-preview"
+    "polymer": "Polymer/polymer#^2.0.0",
+    "paper-input": "PolymerElements/paper-input",
+    "iron-image": "PolymerElements/iron-image",
+    "paper-button": "PolymerElements/paper-button",
+    "paper-toggle-button": "PolymerElements/paper-toggle-button",
+    "paper-dialog": "PolymerElements/paper-dialog#^2.0.0"
   },
   "devDependencies": {
-    "iron-component-page": "PolymerElements/iron-component-page#2.0-preview",
-    "iron-demo-helpers": "PolymerElements/iron-demo-helpers#2.0-preview",
-    "web-component-tester": "v6.0.0-prerelease.5",
-    "webcomponentsjs": "webcomponents/webcomponentsjs#1.0.0-rc.5"
+    "iron-component-page": "PolymerElements/iron-component-page",
+    "iron-demo-helpers": "PolymerElements/iron-demo-helpers",
+    "web-component-tester": "v6.0.0",
+    "webcomponentsjs": "webcomponents/webcomponentsjs"
   },
   "resolutions": {
-    "polymer": "^2.0.0-rc.2",
-    "iron-behaviors": "2.0-preview",
-    "iron-a11y-keys-behavior": "2.0-preview",
-    "iron-validatable-behavior": "2.0-preview",
-    "iron-meta": "2.0-preview",
-    "iron-form-element-behavior": "2.0-preview",
-    "iron-flex-layout": "2.0-preview",
-    "paper-styles": "2.0-preview",
-    "webcomponentsjs": "1.0.0-rc.5",
-    "paper-button": "2.0-preview",
-    "paper-behaviors": "2.0-preview",
-    "iron-checked-element-behavior": "2.0-preview",
-    "paper-ripple": "2.0-preview"
+    "webcomponentsjs": "^v1.0.2",
+    "iron-selector": "1 - 2"
   }
 }

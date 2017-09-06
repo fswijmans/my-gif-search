@@ -8,6 +8,8 @@
 
 <link rel="import" href="../../theme/technology.css" type="css">
 
+<my-tag url="www.nu.nl"></my-tag>
+
 <dom-module id="my-gif-search-app">
     <template>
         <style>
@@ -86,15 +88,30 @@
         <paper-button class="pirmary" on-tap="buttonTapped">+</paper-button>
         <paper-toggle-button checked value="[[_isGiphyInsteadOfRijks]]" on-tap="toggleTapped"></paper-toggle-button>
 
+
+        <template is="dom-repeat" items="[[_history]]">
+
+            <paper-button on-tap="clickHistory">[[item]]</paper-button>
+
+        </template>
+
+        <hr>
+
         <!-- ITEMS BE HERE -->
         <template is="dom-repeat" items="[[_result]]">
-            <div on-tap="handleItemTap" class="item">
+            <div class="item">
+                <div on-tap="handleItemTap">
                 <img src$="[[item.url]]" alt="[[item.title]]">
                 <p>
                     <b>[[item.title]]</b><br/>
                     <small>[[item.maker]]</small>
                 </p>
+                </div>
+
+                <paper-button on-tap="clickLeft">LEFT</paper-button>
+                <paper-button on-tap="clickRight">RIGHT</paper-button>
             </div>
+
         </template>
 
         <hr>
@@ -152,7 +169,7 @@
                      */
                     _limit: {
                         type: Number,
-                        value: 1
+                        value: 2
                     },
                     /**
                      *
@@ -165,6 +182,10 @@
                     dialogOpened: {
                         type: Boolean,
                         value: false
+                    },
+                    _history: {
+                      type: Array,
+                      value: []
                     }
                 };
             }
@@ -184,7 +205,6 @@
              */
             handleGiphyResponse(responseData) {
                 let data = responseData.detail.response.data;
-                console.log(`I haz ${this.keyword}, ${data.length} be fetched.`);
                 // take the url of a fixed height image
                 this._result = data.map(dataItem => {
                     return {
@@ -192,9 +212,13 @@
                         title: dataItem.slug,
                         maker: dataItem.source_tld,
                         originalUrl: dataItem.images.original.url
-                        
                     }
                 });
+                this._limit = this._result.length;
+
+                if(!this._history.includes(this.keyword)) {
+                  this.push('_history', this.keyword);
+                }
             }
             /**
              * Function that takes response from the Rijks API, and forms it to our own item format.
@@ -234,6 +258,51 @@
                 let dialog = this.$.dialog;
                 dialog.opened=true;
             }
+
+            clickRight(e) {
+
+              var list = this._result;
+              var y = e.model.index;
+              var x = y + 1;
+
+              if(y >= (list.length-1)){
+                return;
+              }
+
+              var b = list[y];
+              list[y] = list[x];
+              list[x] = b;
+
+              this._result = [];
+
+              list.forEach((item) => {
+                this.push('_result', item);
+              });
+            }
+
+            clickLeft(e){
+              var list = this._result;
+              var y = e.model.index;
+              var x = y - 1;
+
+              if(y === 0){
+                return;
+              }
+
+              var b = list[y];
+              list[y] = list[x];
+              list[x] = b;
+
+              this._result = [];
+
+              list.forEach((item) => {
+                this.push('_result', item);
+              });
+            }
+
+          clickHistory(e){
+              this.keyword= e.model.item;
+          }
             
         }
 
